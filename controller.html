@@ -1,0 +1,921 @@
+<html>
+<head>
+  <script type="text/javascript"
+          src="https://www.airconsole.com/api/airconsole-1.4.0.js"></script>
+  <script type="text/javascript" src="button.js"></script>
+  <script type="text/javascript" src="rules.js"></script>
+  <script type="text/javascript" src="strings.js"></script>
+  <script type="text/javascript" src="character_mapping.js"></script>
+  <script type="text/javascript">
+
+    var airconsole;
+	
+	var instructer;
+	var char_table;
+	var doors;
+	var relation_strength;
+	var door_opening;
+	var self_photo;
+	var partner_photo;
+	var couple_info;
+	
+	var current_door = 0;
+	
+	var player_status = PlayerStatus.registering;
+	
+	var date = new Date();
+	
+    /**
+     * Sets up the communication to the screen.
+     */
+    function init() {
+		airconsole = new AirConsole({"orientation": "portrait", "device_motion": 10});
+		
+		instructer = document.getElementById("instructer");
+		
+		relation_strength = document.getElementById("relation-strength");
+		
+		door_opening = document.getElementById("door-opening");
+		
+		char_table = document.getElementById("char-table");
+		
+		doors = [document.getElementById('doorframe0'),
+					document.getElementById('doorframe1'),
+					document.getElementById('doorframe2'),
+					document.getElementById('doorframe3'),
+					document.getElementById('doorframe4'),
+					document.getElementById('doorframe5'),
+					document.getElementById('doorframe6'),
+					document.getElementById('doorframe7'),
+					document.getElementById('doorframe8')];
+		
+		self_photo = document.getElementById('photo1');
+		partner_photo = document.getElementById('photo2');
+		
+		couple_info = document.getElementById('nickname');
+		
+		  /*
+		   * Checks if this device is part of the active game.
+		   */
+		  airconsole.onActivePlayersChange = function(player) {
+			if (player !== undefined) {
+			  //instructer.innerHTML =  ("Player "+player+" device_id = "+airconsole.getDeviceId());
+			} else {
+			  //instructer.innerHTML = "It's a 2 player game!";
+			}
+		  };
+		
+		
+		//received messages
+		airconsole.onMessage = function(device_id, data) {
+			if (device_id == AirConsole.SCREEN && data.choice != undefined) {
+				promptChoice(data.choice);
+			}
+			else if (device_id == AirConsole.SCREEN && data.request_from != undefined) {
+				promptRequest(data.request_from, data.request_character);
+			}
+			else if (device_id == AirConsole.SCREEN && data.elected) {
+				promptElected();
+			}
+			else if (device_id == AirConsole.SCREEN && data.placement != undefined) {
+				placeChar(data.placement);
+				/*if(data.bedshares != undefined) {
+					fillCharTable(data.placement, data.bedshares);
+				}
+				else {
+					placeChar(data.placement);
+				}*/
+			}
+			else if (device_id == AirConsole.SCREEN && data.bedshares != undefined) {
+				//fillCharTable(data.bedshares);
+			}
+			else if (device_id == AirConsole.SCREEN && data.confirm_bond != undefined) {
+				requestResult(data.confirm_bond);
+			}
+			else if (device_id == AirConsole.SCREEN && data.apart != undefined) {
+				couple_apart = data.apart;
+			}
+			else if (device_id == AirConsole.SCREEN && data.caught != undefined) {
+				caught = data.caught;
+				setTimeout("caughtCountdown()", CAUGHT_DELAY);
+			}
+			else if (device_id == AirConsole.SCREEN && data.break_bond) {
+				endRelation();
+				if(caught)
+				{
+					player_status = PlayerStatus.lost;
+					instructer.innerHTML = instr_caught+" <br> "+instr_end;
+				}
+			}
+			else if (device_id == AirConsole.SCREEN && data.door_score != undefined) {
+				currently_opening = false;
+				instructer.innerHTML = data.door_score+instr_caught_couples;
+			}
+			else if (device_id == AirConsole.SCREEN && data.won_couple != undefined) {
+				instructer.innerHTML = instr_won_couple;
+				player_status = PlayerStatus.won;
+			}
+			else if (device_id == AirConsole.SCREEN && data.game_over) {
+				setTimeout("endGame()", CAUGHT_DELAY);
+			}
+		}
+		
+		placeChar(0);
+		
+		setupControls();
+
+    }
+	
+		function getNeighborDoorInDirection(current_door, move) {
+			var row = Math.floor(current_door / 3);
+			var col = current_door % 3;
+			switch(move)
+			{
+			case "ul":
+				row -= 1;
+				col -= 1;
+				break;
+			case "uc":
+				row -= 1;
+				break;
+			case "ur":
+				row -= 1;
+				col += 1;
+				break;
+			case "cl":
+				col -= 1;
+				break;
+			case "cr":
+				col += 1;
+				break;
+			case "dl":
+				row += 1;
+				col -= 1;
+				break;
+			case "dc":
+				row += 1;
+				break;
+			case "dr":
+				row += 1;
+				col += 1;
+				break;
+			}
+			
+			
+			var new_door = row*3+col;
+			if(row < 0 || row >= 3 || col < 0 || col >= 3)
+				new_door = current_door;
+			
+			return new_door;
+		}
+	
+		function placeChar(door_num)
+		{
+			/*if(elected)
+				fillCharTablePolice(door_num);
+			else
+				fillCharTable(door_num, [chosenCharacter]);*/
+			
+			//instructer.innerHTML = "place char at "+door_num;
+			//doors[door_num].style = "background-color: #ccf400;"
+			//doors[current_door].style = "background-color: #000000;"
+			//doors[door_num].style.backgroundImage = 'url("images/doorframe_in.png")';
+			doors[door_num].style.backgroundColor = '#ccf400';
+			if(current_door != door_num)
+				doors[current_door].style.backgroundColor = '#000000';
+			current_door = door_num;
+		}
+		
+		function fillCharTable(door_num, characters)
+		{
+			current_door = door_num;
+			
+			
+			while (char_table.hasChildNodes()) {
+				char_table.removeChild(char_table.lastChild);
+			}
+			
+			var perrow = Math.ceil(Math.sqrt(characters.length));
+			var row;
+			for(var i = 0; i < characters.length; i++)
+			{
+				if(i%perrow == 0)
+				{
+					row = document.createElement('div');
+					row.style = "display: table-row";
+					char_table.appendChild(row);
+				}
+				var newdiv = document.createElement('div');
+				newdiv.className = "charimg";
+				newdiv.style.backgroundImage = "url("+character_mapping[characters[i]]+")";
+				row.appendChild(newdiv);
+			}
+			
+			doors[door_num].appendChild(char_table);
+			/*var newPos = doors[door_num].getBoundingClientRect();
+			char_table.style.top = (newPos.top+charOffsetY)+"px";
+			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
+		}
+		
+		function fillCharTablePolice(door_num)
+		{
+			current_door = door_num;
+			
+			
+			while (char_table.hasChildNodes()) {
+				char_table.removeChild(char_table.lastChild);
+			}
+			
+			var newdiv = document.createElement('div');
+			newdiv.className = "charimg";
+			newdiv.style.backgroundImage = "url("+police_character[chosenCharacter%2]+")";
+			char_table.appendChild(newdiv);
+			
+			doors[door_num].appendChild(char_table);
+			/*var newPos = doors[door_num].getBoundingClientRect();
+			char_table.style.top = (newPos.top+charOffsetY)+"px";
+			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
+		}
+
+		
+		var givenChoice;
+		function promptChoice(choice)
+		{
+			givenChoice = choice;
+			document.getElementById("doors-controls").style.display="none";
+			document.getElementById("prompt-choice").style.display="block";
+			document.getElementById("prompt-request").style.display="none";
+			document.getElementById("choice-1").style.backgroundImage = "url("+character_mapping[choice]+")";
+			document.getElementById("choice-2").style.backgroundImage = "url("+character_mapping[choice+1]+")";
+			instructer.innerHTML = pick_character;
+		}
+		
+		var chosenCharacter = 0;
+		function chooseCharacter(which)
+		{
+			chosenCharacter = givenChoice+which;
+			airconsole.message(AirConsole.SCREEN, {choice: chosenCharacter});
+			document.getElementById("doors-controls").style.display="block";
+			document.getElementById("prompt-choice").style.display="none";
+			instructer.innerHTML = instr_character;
+			player_status = PlayerStatus.playing;
+			
+			self_photo.style.backgroundImage = "url("+character_mapping[chosenCharacter]+")";
+			partner_photo.style.display = "none";
+			
+			couple_info.innerHTML = single_title;
+		}
+		
+		var elected = false;
+		function promptElected()
+		{
+			instructer.innerHTML = instr_elected;
+			elected = true;
+			placeChar(current_door);
+			
+			document.getElementById("button-open").style.display = "block";
+			
+			self_photo.style.backgroundImage = "url("+police_character[chosenCharacter%2]+")";
+			couple_info.innerHTML = single_title;
+		}
+		
+		var tentativeBondWith;
+		var tentativeBondDeviceID;
+		function promptRequest(device_id, pretensioner)
+		{
+			tentativeBondWith = pretensioner; //should get picture...
+			tentativeBondDeviceID = device_id;
+			instructer.innerHTML = airconsole.getNickname(device_id)+instr_request;
+			document.getElementById("doors-controls").style.display="none";
+			document.getElementById("prompt-request").style.display="block";
+			document.getElementById("pretensioner").style.backgroundImage = "url("+character_mapping[pretensioner]+")";
+			startRelation();
+		}
+		
+		var bondAccepted = false;
+		function acceptBond()
+		{
+			bondAccepted = true;
+			airconsole.message(AirConsole.SCREEN, {acceptBond: true});
+			document.getElementById("doors-controls").style.display="block";
+			document.getElementById("prompt-request").style.display="none";
+		}
+		
+		function refuseBond()
+		{
+			bondAccepted = false;
+			airconsole.message(AirConsole.SCREEN, {acceptBond: false});
+			document.getElementById("doors-controls").style.display="block";
+			document.getElementById("prompt-request").style.display="none";
+		}
+		
+		var bondedWith;
+		var bondStart;
+		function requestResult(bonded)
+		{
+			if(bonded)
+			{
+				instructer.innerHTML = instr_bonded_accept+airconsole.getNickname(tentativeBondDeviceID)+instr_bonded_task;
+				relation_strength.style.display = "block";
+			}
+			else
+			{
+				if(bondAccepted)
+					instructer.innerHTML = airconsole.getNickname(tentativeBondDeviceID)+instr_bonded_refuse;
+				bondedWith = undefined;
+				endRelation();
+			}
+		}
+		
+		function startRelation()
+		{
+			bondedWith = tentativeBondWith;
+			bondStart = date.getTime();
+			relation_progress = 0;
+			updateRelationProgress();
+			couple_apart = false;
+			
+			partner_photo.style.backgroundImage = "url("+character_mapping[bondedWith]+")";
+			partner_photo.style.display = "";
+			couple_info.innerHTML = partner_title+airconsole.getNickname(bondedWith);
+		}
+		
+		function endRelation()
+		{
+			bondedWith = undefined;
+			bondStart = undefined;
+			relation_strength.style.display = "none";
+			instructer.innerHTML = instr_relationend+" <br> "+instr_end;
+			
+			partner_photo.style.backgroundImage = "";
+			partner_photo.style.display = "none";
+			couple_info.innerHTML = single_title;
+		}
+		
+		var caught = true;
+		const CAUGHT_DELAY = 2000;
+		function caughtCountdown()
+		{
+			caught = false;
+		}
+		
+		const PROGRESS_UPDATE_RATE = 100;
+		var t;
+		var relation_progress;
+		var couple_apart = false;
+		function updateRelationProgress()
+		{
+			var step = PROGRESS_UPDATE_RATE/RELATION_TIME;
+			if(couple_apart)
+			{
+				step = -APART_PENALTY*step;
+			}
+			relation_progress = relation_progress + step;
+			relation_strength.value = Math.round(relation_strength.max*relation_progress).toString();
+			
+			if(bondedWith != undefined)
+				t = setTimeout("updateRelationProgress()", PROGRESS_UPDATE_RATE);
+		}
+		
+		function openDoor()
+		{
+			airconsole.message(airconsole.SCREEN, {open_door: current_door});
+			door_progress = 0;
+			currently_opening = true;
+			door_opening.style.display = "block";
+			updateOpenProgress();
+		}
+		
+		var currently_opening = false;
+		var door_progress;
+		var t2;
+		function updateOpenProgress()
+		{
+			var step = PROGRESS_UPDATE_RATE/DOOR_OPEN_TIME;
+			door_progress += step;
+			door_opening.value = (door_opening.max*door_progress).toString();
+			if(currently_opening)
+				t2 = setTimeout("updateOpenProgress()", PROGRESS_UPDATE_RATE);
+			else
+				door_opening.style.display = "none";
+		}
+		
+		function endGame()
+		{
+			instructer.innerHTML = instr_gameover;
+			document.getElementById("doors-controls").style.display="none";
+			document.getElementById("prompt-request").style.display="none";
+		}
+  </script>
+  <script type="text/javascript">
+	var direction_arrows;
+	
+	const SPEED_THRESH = 3;
+	const DECISIVE_STRENGTH = 10*Math.exp(0);
+	const STILL_RESET_COUNT = 50;
+	
+	function setupControls()
+	{
+		
+		direction_arrows = [document.getElementById('arrow-up'),
+							document.getElementById('arrow-down'),
+							document.getElementById('arrow-left'),
+							document.getElementById('arrow-right')];
+		
+		updateDirectionArrows("none", 0);
+		
+	//send message when user agitates screen for some time
+		var old_x, old_y = 0;
+		var still_x, still_y = 0;
+		var diffx = new Array();
+		var diffy = new Array();
+		var stillcounter = 0;
+		var directions = [0, 0, 0, 0, 0, 0, 0, 0];
+		var move_direction;
+		var lock_moved = false;
+		var arrow_strength = 0;
+		airconsole.onDeviceMotion = function(data) {
+			
+			var tmpspeedx = data.x - old_x;
+			var tmpspeedy = data.y - old_y;
+			var tmpmag2 = Math.pow(tmpspeedx,2)+Math.pow(tmpspeedy,2);
+			
+			old_x = data.x;
+			old_y = data.y;
+			
+			if (!lock_moved && tmpmag2 > SPEED_THRESH)
+			{
+				var tmpdiffx = data.x - still_x;
+				var tmpdiffy = data.y - still_y;
+				
+				diffx.push(tmpdiffx);
+				diffy.push(tmpdiffy);
+				stillcounter = 0;
+				
+				var ratio = Math.abs(tmpdiffy/tmpdiffx);
+				
+				var val = 0;
+				
+				if(ratio > 1) //vertical movement
+				{
+					val = 2*Math.abs(tmpdiffy);//there seem to be less sensitivity along y
+					if(tmpdiffy > 0)
+					{
+						move_direction = "uc";
+					}
+					else
+					{
+						move_direction = "dc";
+					}
+				}
+				else
+				{
+					val = Math.abs(tmpdiffx);
+					if(tmpdiffx > 0)
+					{
+						move_direction = "cr";
+					}
+					else
+					{
+						move_direction = "cl";
+					}
+				}
+				
+				var exponent = Math.max(-diffx.length/3,-2);
+				var increment = val*Math.exp(exponent);
+				switch(move_direction)
+				{
+				case "ul":
+					directions[0] += increment;
+					break;
+				case "uc":
+					directions[1] += increment;
+					break;
+				case "ur":
+					directions[2] += increment;
+					break;
+				case "cl":
+					directions[3] += increment;
+					break;
+				case "cr":
+					directions[4] += increment;
+					break;
+				case "dl":
+					directions[5] += increment;
+					break;
+				case "dc":
+					directions[6] += increment;
+					break;
+				case "dr":
+					directions[7] += increment;
+					break;
+				}
+				
+				/*var txt = new String("");
+				
+				for(var i=0; i < diffx.length; i++)
+					txt += diffx[i].toFixed(2) + ", ";
+				
+				instructer.innerHTML = txt;*/
+				//instructer.innerHTML = diffx;
+				
+				
+				var max = 0;
+				var max_i = 0;
+				for(var i=0; i < directions.length; i++)
+				{
+					if(directions[i] > max)
+					{
+						max = directions[i];
+						max_i = i;
+					}
+				}
+				
+				switch(max_i)
+				{
+				case 0:
+					move_direction = "ul";
+					break;
+				case 1:
+					move_direction = "uc";
+					break;
+				case 2:
+					move_direction = "ur";
+					break;
+				case 3:
+					move_direction = "cl";
+					break;
+				case 4:
+					move_direction = "cr";
+					break;
+				case 5:
+					move_direction = "dl";
+					break;
+				case 6:
+					move_direction = "dc";
+					break;
+				case 7:
+					move_direction = "dr";
+					break;
+				}
+				
+				arrow_strength = max;
+				updateDirectionArrows(move_direction, arrow_strength);
+				
+				//instructer.innerHTML = move_direction+" "+max;
+				
+				if(max > DECISIVE_STRENGTH)
+				{
+					//var div = document.getElementById("player_id");
+					//instructer.innerHTML = "completed dir = "+move_direction;
+					
+					airconsole.message(AirConsole.SCREEN, {move: move_direction});
+					
+					diffx = [];
+					diffy = [];
+					directions = [0, 0, 0, 0, 0, 0, 0, 0];
+					
+					lock_moved = true;
+					
+					placeChar(getNeighborDoorInDirection(current_door, move_direction));
+					
+					//updateDirectionArrows("none", 0);
+				}
+			}
+			else
+			{
+				stillcounter++;
+			}
+			
+			if(stillcounter == STILL_RESET_COUNT)
+			{
+				still_x = data.x;
+				still_y = data.y;
+				directions = [0, 0, 0, 0, 0, 0, 0, 0];
+				diffx = [];
+				diffy = [];
+				move_direction="none";
+				updateDirectionArrows("none", 0);
+				//instructer.innerHTML = "still";
+			}
+			else if(stillcounter == 1.5*STILL_RESET_COUNT)
+			{
+				lock_moved = false;
+				stillcounter = STILL_RESET_COUNT-1; //ask for still pos new computation
+			}
+			else if(stillcounter < STILL_RESET_COUNT)
+			{
+				updateDirectionArrows(move_direction, arrow_strength * (STILL_RESET_COUNT-stillcounter)/STILL_RESET_COUNT);
+			}
+			
+			//var seconds = new Date().getTime() / 1000;
+			//instructer = seconds;
+			
+		};
+		
+	}
+	
+	function updateDirectionArrows(move_direction, strength)
+		{
+			var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+			if (!/android/i.test(userAgent)) {
+				return;
+			}																								
+			
+			for(var i=0; i < direction_arrows.length; i++)
+			{
+				direction_arrows[i].style.opacity = 0;
+			}
+			
+			var opval = strength/DECISIVE_STRENGTH;
+			switch(move_direction)
+			{
+				case "uc":
+					direction_arrows[0].style.opacity = opval;
+					break;
+				case "dc":
+					direction_arrows[1].style.opacity = opval;
+					break;
+				case "cl":
+					direction_arrows[2].style.opacity = opval;
+					break;
+				case "cr":
+					direction_arrows[3].style.opacity = opval;
+					break;
+			}
+		}
+	
+	function goToNeigh(move_direction) {
+		airconsole.message(AirConsole.SCREEN, {move: move_direction});
+		
+		placeChar(getNeighborDoorInDirection(current_door, move_direction))
+		
+		
+	}
+	
+  </script>
+  <style type="text/css">
+    <!-- @font-face {
+      font-family: 'PressStart2P';
+      src: url('PressStart2P.ttf') format('truetype');
+      text-align: center;
+    } -->
+	
+	html, body {
+      height: 100%;
+      margin: 0px;
+      <!-- font-family: 'PressStart2P', sans-serif; -->
+      color: white;
+      text-align: center;
+      background-color: black;
+    }
+	
+    .direction-arrow {
+		background-image: url('images/arrowup.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+	}
+	
+	#arrow-up {
+		position: absolute;
+		left: 40%;
+		top: 5%;
+		width: 20%;
+		height: 10%;
+	}
+	
+	#arrow-left {
+		position: absolute;
+		left: 0px;
+		top: 40%;
+		width: 10%;
+		height: 20%;
+		-webkit-transform: rotate(-90deg);
+		-moz-transform: rotate(-90deg);
+		-ms-transform: rotate(-90deg);
+		-o-transform: rotate(-90deg);
+		transform: rotate(-90deg);
+	}
+	
+	#arrow-right {
+		position: absolute;
+		left: 90%;
+		top: 40%;
+		width: 10%;
+		height: 20%;
+		-webkit-transform: rotate(90deg);
+		-moz-transform: rotate(90deg);
+		-ms-transform: rotate(90deg);
+		-o-transform: rotate(90deg);
+		transform: rotate(90deg);
+	}
+	
+	#arrow-down {
+		position: absolute;
+		left: 40%;
+		top: 90%;
+		width: 20%;
+		height: 10%;
+		-webkit-transform: rotate(180deg);
+		-moz-transform: rotate(180deg);
+		-ms-transform: rotate(180deg);
+		-o-transform: rotate(180deg);
+		transform: rotate(180deg);
+		opacity: 0.5;
+	}
+	
+	.button-300-150 {
+		background-image: url('images/button-300-150.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+	}
+
+	.button-300-150.button-active {
+		background-image: url('images/button-300-150-active.png');
+	}
+	
+	#button-open {
+		width: 50px;
+		height: 20px;
+		display: none;
+		margin: auto;
+	}
+	
+	
+	.choicepic {
+		background-image: url('images/characters/add-user_128px.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+	}
+	
+	#building-summary {
+		display: table;
+		margin: auto;
+		padding-top: 120px;
+	}
+	
+	.doors-row {
+		display: table-row;
+	}
+	
+	.door-frame {
+		display: table-cell;
+		background-image: url('images/doorframe.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+		width: 80px;
+		height: 79px;
+	}
+	
+	#char-cursor {
+		background-color: #ccf400;
+		width: 10%;
+		height: 10%;
+		display: none;
+	}
+	
+	#char-table {
+		display: table;
+		margin: auto;
+		padding-top: 20px;
+	}
+	
+	.char-row {
+		display: table-row;
+	}
+	
+	.charimg {
+		background-image: url('images/characters/remove-user_128px.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+		display: table-cell;
+		width: 80px;
+		height: 80px;
+		padding-left: 30px;
+		padding-right: 30px;
+	}
+	
+	#nickname {
+		padding-top: 10px;
+		margin: auto;
+		color: #777;
+	}
+	
+	#choice-1 {
+		position: absolute;
+		left: 20%;
+		top: 40%;
+		width: 33%;
+		height: 33%;
+	}
+	
+	#choice-2 {
+		position: absolute;
+		left: 60%;
+		top: 40%;
+		width: 33%;
+		height: 33%;
+	}
+	
+	#pretensioner {
+		position: absolute;
+		left: 40%;
+		top: 40%;
+		width: 33%;
+		height: 33%;
+		background-repeat: no-repeat;
+	}
+	
+	#accept {
+		position: absolute;
+		left: 20%;
+		top: 70%;
+		width: 20%;
+		height: 20%;
+		background-image: url('images/accept.png');
+	}
+	
+	#refuse {
+		position: absolute;
+		left: 60%;
+		top: 70%;
+		width: 20%;
+		height: 20%;
+		background-image: url('images/refuse.jpg');
+	}
+	
+	#instructer {
+		position: absolute;
+		left: 0%;
+		top: 15%;
+		width: 100%;
+		margin-top: -8px;
+		color: #777;
+	}
+	
+	#relation-strength {
+		width: 75%;
+		margin: auto;
+		display: none;
+	}
+	
+	#door-opening {
+		width: 75%;
+		display: none;
+		display: none;
+	}
+	
+  </style>
+</head>
+<body onload="init()">
+<div id=doors-controls>
+	<div id=arrow-up class=direction-arrow ontouchstart='goToNeigh("uc")' onmousedown='goToNeigh("uc")'></div>
+	<div id=arrow-left class=direction-arrow ontouchstart='goToNeigh("cl")' onmousedown='goToNeigh("cl")'></div>
+	<div id=arrow-down class=direction-arrow ontouchstart='goToNeigh("dc")' onmousedown='goToNeigh("dc")'></div>
+	<div id=arrow-right class=direction-arrow ontouchstart='goToNeigh("cr")' onmousedown='goToNeigh("cr")'></div>
+	<div id=building-summary>
+		<div class='doors-row'>
+			<div id=doorframe0 class=door-frame></div>
+			<div id=doorframe1 class=door-frame></div>
+			<div id=doorframe2 class=door-frame></div>
+		</div>
+		<div class='doors-row'>
+			<div id=doorframe3 class=door-frame></div>
+			<div id=doorframe4 class=door-frame></div>
+			<div id=doorframe5 class=door-frame></div>
+		</div>
+		<div class='doors-row'>
+			<div id=doorframe6 class=door-frame></div>
+			<div id=doorframe7 class=door-frame></div>
+			<div id=doorframe8 class=door-frame></div>
+		</div>
+	</div>
+	<div id=char-table>
+		<div class=char-row>
+			<div id=photo1 class=charimg></div>
+			<div id=photo2 class=charimg></div>
+		</div>
+	</div>
+	<div id=nickname></div>
+	<progress id=relation-strength value="22" max="100"></progress>
+	<progress id=door-opening value="22" max="100"></progress>
+	<div id=button-open class=button-300-150 ontouchstart="openDoor()" onmousedown="openDoor()">open</div>
+</div>
+<div id=prompt-choice>
+	<div id=choice-1 class=choicepic ontouchstart="chooseCharacter(0)" onmousedown="chooseCharacter(0)"></div>
+	<div id=choice-2 class=choicepic ontouchstart="chooseCharacter(1)" onmousedown="chooseCharacter(1)"></div>
+</div>
+<div id=prompt-request>
+	<div id=pretensioner class=choicepic"></div>
+	<div id=accept class=choicepic ontouchstart="acceptBond()" onmousedown="acceptBond()"></div>
+	<div id=refuse class=choicepic ontouchstart="refuseBond()" onmousedown="refuseBond()"></div>
+</div>
+<div id=instructer>I instruct;</div>
+</body>
+</html>

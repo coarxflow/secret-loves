@@ -1,0 +1,1057 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.4.0.js"></script>
+	<script type="text/javascript" src="rules.js"></script>
+	  <script type="text/javascript" src="strings.js"></script>
+  <script type="text/javascript" src="character_mapping.js"></script>
+	<script type="text/javascript">
+		var airconsole;
+		var doors;
+		var sky;
+		var eye;
+		var door_opening;
+		
+		var registered_players = new Array();
+		var player_status;
+		var player_placements;
+		var player_last_placement_time;
+		var bonded_players = [];
+		var players_acceptance;
+		var couple_strengths = [];
+		var confirmed_couples = [];
+		
+		var date = new Date();
+		
+		
+		// Array Remove - By John Resig (MIT Licensed)
+		Array.prototype.remove = function(from, to) {
+		  var rest = this.slice((to || from) + 1 || this.length);
+		  this.length = from < 0 ? this.length + from : from;
+		  return this.push.apply(this, rest);
+		};
+		
+		Array.prototype.contains = function ( needle ) {
+		   for (i in this) {
+			   if (this[i] == needle) return true;
+		   }
+		   return false;
+		}
+		
+		/////////////// initalization functions //////////////////////////
+		
+		function init() {
+		
+			setupConsole();
+		
+			setupDoors();
+			
+			setupEye();
+			
+			sky = document.getElementById('sky');
+			loopSky();
+			
+			player_status = new Array(MAX_PLAYERS);
+			player_placements = new Array(MAX_PLAYERS);
+			player_last_placement_time = new Array(MAX_PLAYERS);
+			players_acceptance = new Array(MAX_PLAYERS);
+			
+			t=setTimeout("giveRoles()",3*ROLES_LOOP_TIME);
+			loopPlayerRelationStrengths();
+			
+			document.getElementById("couple-caught").style.display = "none";
+			door_opening = document.getElementById("door-opening");
+			door_opening.style.display = "none";
+		}
+		
+		function setupDoors() {
+			doors = [document.getElementById('door1'),
+					document.getElementById('door2'),
+					document.getElementById('door3'),
+					document.getElementById('door4'),
+					document.getElementById('door5'),
+					document.getElementById('door6'),
+					document.getElementById('door7'),
+					document.getElementById('door8'),
+					document.getElementById('door9')];
+			
+			
+			
+			open_doors = new Array(9);
+			
+			for (var i = 0; i < 9; i ++)
+			{
+				doors[i].style.backgroundImage = "url(images/dooropen.png)";
+				open_doors[i] = true;
+			}
+			
+		}
+		
+		var eyeLookAtDoor = 4;
+		function setupEye() {
+			eye = document.getElementById('eye');
+			eye.style.display = "none";
+			placeEye();
+		}
+		
+		var skyprog = 0;
+		function loopSky() {
+			sky.style.backgroundPosition = skyprog+"px 0px";
+			
+			skyprog++;
+		
+			requestAnimationFrame(loopSky);
+		}
+		
+		var eyePlayer;
+		const ROLES_LOOP_TIME = 1000;
+		var t;
+		function giveRoles() {
+			console.log ( 'giveRoles called '+registered_players.length);
+			if(eyePlayer == undefined && registered_players.length >= 3 && !initPhase)
+			{
+				var newEyePlayer = registered_players[Math.floor(Math.random()*registered_players.length)];
+				if(player_status[newEyePlayer] == PlayerStatus.playing) //make sure player has completed character selection
+				{
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(newEyePlayer), {elected: true});
+					eyePlayer = newEyePlayer;
+					eye.style.display = "block";
+					eye.style.backgroundImage = "url("+police_character[assigned_choices[newEyePlayer]%2]+")";
+					player_status[newEyePlayer] = PlayerStatus.police;
+					eyeLookAtDoor = player_placements[eyePlayer];
+					placeEye();
+				}
+				else
+				{
+					t=setTimeout("giveRoles()",ROLES_LOOP_TIME);
+				}
+			}
+			else
+			{
+				t=setTimeout("giveRoles()",ROLES_LOOP_TIME);
+			}
+		}
+		
+		var initPhase = true;
+		var countdownstarted = false;
+		function initDoorsOpenCountdown()
+		{
+			for (var i = 0; i < 9; i ++)
+			{
+				closeDoor(i);
+			}
+			
+			initPhase = false;
+		}
+		
+		//////////// control and message functions //////////////////////
+		
+		/**
+       * Sets up the communication to game pads.
+       */
+		function setupConsole() {
+			airconsole = new AirConsole();
+			
+			airconsole.onConnect = function(device_id) {
+				giveChoice(device_id);
+				checkPlayers();
+				if(airconsole.convertDeviceIdToPlayerNumber(device_id) != undefined)
+				{
+					player_status[airconsole.convertDeviceIdToPlayerNumber(device_id)] = PlayerStatus.registering;
+				}
+			};
+
+			airconsole.onDisconnect = function(device_id) {
+			  player_status[airconsole.convertDeviceIdToPlayerNumber(device_id)] = PlayerStatus.quitted;
+			  checkPlayers();
+			};
+
+			airconsole.onMessage = function(device_id, data) {
+			  var player = airconsole.convertDeviceIdToPlayerNumber(device_id);
+			  if (player != undefined)
+			  {
+				if(data.move != undefined) {
+					var last_door = player_placements[player];
+					var new_door = getNeighborDoorInDirection(player_placements[player], data.move); //version with accelerometer
+					//var new_door = getDoorNumber(player_placements[player], data.move); //version with buttons
+					player_placements[player] = new_door;
+					date = new Date();
+					player_last_placement_time[player] = date.getTime();
+					if(player == eyePlayer)
+					{
+						eyeLookAtDoor = new_door;
+						placeEye();
+					}
+					else
+					{
+						if(player_status[player] == PlayerStatus.won || player_status[player] == PlayerStatus.lost)
+							sendBedsharesAndPlacement(player, last_door);
+						if(eyePlayer!=undefined) //avoid early bonding (one character could become police in between)
+							checkPlayerInteraction(player);
+						if(open_doors[new_door])
+						{
+							updateCharactersInDoor(new_door);
+						}
+						if(open_doors[last_door])
+						{
+							updateCharactersInDoor(last_door);
+						}
+					}
+					console.log("placement : "+new_door+" "+player_placements);
+				}
+				else if(data.acceptBond != undefined) {
+					players_acceptance[player] = data.acceptBond;
+					checkPlayerAcceptance(player);
+				}
+				else if(data.choice != undefined) {
+					registered_players.push(player);
+					assigned_choices[player] = data.choice;
+					givePlacement(device_id);
+					player_status[player] = PlayerStatus.playing;
+					if(!countdownstarted)
+					{
+						countdownstarted = true;
+						setTimeout("initDoorsOpenCountdown()", INIT_DOOR_OPEN_TIME);
+					}
+				}
+				else if(data.open_door != undefined)
+				{
+					openDoor(data.open_door);
+				}
+			  }
+				
+			};
+
+		}
+		
+		function checkPlayers() {
+        var active_players = airconsole.getActivePlayerDeviceIds();
+        var connected_controllers = airconsole.getControllerDeviceIds();
+		//airconsole.setActivePlayers(MAX_PLAYERS);
+		
+		airconsole.setActivePlayers(MAX_PLAYERS);
+		
+        if (connected_controllers.length >= 3) {
+            // Enough controller devices connected to start the game.
+            // Setting the first 3 controllers to active players.
+            document.getElementById("wait").innerHTML = "";
+		  } else if (connected_controllers.length == 2) {
+			document.getElementById("wait").innerHTML = "Need 1 more player!";
+            
+          } else if (connected_controllers.length == 1) {
+            document.getElementById("wait").innerHTML = "Need 2 more players!";
+            
+          } else if (connected_controllers.length == 0) {
+            document.getElementById("wait").innerHTML = "Need 3 more players!";
+            
+        }
+      }
+		
+		var choices_pool = [1, 3, 5, 7, 9, 11];
+		const MAX_PLAYERS = 6;
+		var assigned_choices = new Array(MAX_PLAYERS);
+		function giveChoice(device_id)
+		{
+			var choice_index = Math.floor(Math.random() * choices_pool.length);
+			var choice = choices_pool[choice_index];
+			choices_pool.remove(choice_index);
+			airconsole.message(device_id, {choice: choice});
+		}
+		
+		
+		function givePlacement(device_id)
+		{
+			var player = airconsole.convertDeviceIdToPlayerNumber(device_id);
+			var available_placement = 0;
+			for(var i = 0; i < player_placements.length; i++)
+			{
+				if(player_placements[i] == available_placement)
+				{
+					available_placement++; //try next spot and restart loop
+					i = 0;
+				}
+			}
+			
+			player_placements[player] = available_placement;
+			sendBedsharesAndPlacement(available_placement, -1);
+			updateCharactersInDoor(available_placement);
+		}
+		
+		////////////// update functions ////////////////////
+		
+		var eyeOffsetX = -110;
+		var eyeOffsetY = 0;
+		function placeEye() {
+			var newPos = doors[eyeLookAtDoor].getBoundingClientRect();;
+			eye.style.top = (newPos.top+eyeOffsetY)+"px";
+			eye.style.left = (newPos.left+eyeOffsetX)+"px";
+		}
+		
+		function getDoorNumber(current_door, door_position) {
+			var door_num = 0;
+			switch(door_position)
+			{
+			case "ul":
+				door_num = 0;
+				break;
+			case "uc":
+				door_num = 1;
+				break;
+			case "ur":
+				door_num = 2;
+				break;
+			case "cl":
+				door_num = 3;
+				break;
+			case "cc":
+				door_num = 4;
+				break;
+			case "cr":
+				door_num = 5;
+				break;
+			case "dl":
+				door_num = 6;
+				break;
+			case "dc":
+				door_num = 7;
+				break;
+			case "dr":
+				door_num = 8;
+				break;
+			default:
+				door_num = current_door;
+				break;
+			}
+			
+			return door_num;
+		}
+		
+		function getNeighborDoorInDirection(current_door, move) {
+			var row = Math.floor(current_door / 3);
+			var col = current_door % 3;
+			switch(move)
+			{
+			case "ul":
+				row -= 1;
+				col -= 1;
+				break;
+			case "uc":
+				row -= 1;
+				break;
+			case "ur":
+				row -= 1;
+				col += 1;
+				break;
+			case "cl":
+				col -= 1;
+				break;
+			case "cr":
+				col += 1;
+				break;
+			case "dl":
+				row += 1;
+				col -= 1;
+				break;
+			case "dc":
+				row += 1;
+				break;
+			case "dr":
+				row += 1;
+				col += 1;
+				break;
+			}
+			
+			
+			var new_door = row*3+col;
+			if(row < 0 || row >= 3 || col < 0 || col >= 3)
+				new_door = current_door;
+			
+			return new_door;
+		}
+		
+		function sendBedsharesAndPlacement(player, last_door)
+		{
+			var bedshares = new Array();
+			var bedshares_pics = new Array();
+			var place = player_placements[player];
+			for(var i = 0; i < player_placements.length; i++)
+			{
+				if(place == player_placements[i] && i != eyePlayer && player_status[i] == PlayerStatus.playing)
+				{
+					bedshares_pics.push(assigned_choices[i]);
+					bedshares.push(i);
+				}
+			}
+			
+			for(var i = 0; i < bedshares.length; i++)
+			{
+				airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: place, bedshares: bedshares_pics});
+			}
+			
+			//inform previous bedshares that x has left
+			bedshares = new Array();
+			bedshares_pics = new Array();
+			for(var i = 0; i < player_placements.length; i++)
+			{
+				if(last_door == player_placements[i] && i != eyePlayer)
+				{
+					bedshares_pics.push(assigned_choices[i]);
+					bedshares.push(i);
+				}
+			}
+			
+			for(var i = 0; i < bedshares.length; i++)
+			{
+				airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: last_door, bedshares: bedshares_pics});
+			}
+		}
+		
+		function checkPlayerInteraction(trigger_player) {
+			if(bonded_players.contains(trigger_player))
+				return;
+			if(player_status[trigger_player] != PlayerStatus.playing)
+				return;
+			
+			
+			var found_bedshares = [];
+			for(var i = 0; i < MAX_PLAYERS; i++)
+			{
+				if(i != trigger_player && player_placements[i] == player_placements[trigger_player] && player_status[i] == PlayerStatus.playing && i != eyePlayer)
+				{
+					found_bedshares.push(i);
+				}
+			}
+			
+			//sort by arrival time
+			for(var i = 0; i < found_bedshares.length-1; i++)
+			{
+				if(player_last_placement_time[found_bedshares[i]] > player_last_placement_time[found_bedshares[i+1]]) //swap
+				{
+					var tmp = found_bedshares[i];
+					found_bedshares[i] = found_bedshares[i+1];
+					found_bedshares[i+1] = tmp;
+					i=0; //until everything is in correct order
+				}
+			}
+			
+			console.log("check bed shares "+found_bedshares+" couples "+bonded_players+" "+couple_strengths);
+			
+			for(var i = 0; i < found_bedshares.length; i++)
+			{
+				if(!bonded_players.contains(found_bedshares[i]))
+				{
+					t2 = setTimeout(sendMatingRequest, REQUEST_DELAY, trigger_player, found_bedshares[i]);
+					break;
+				}
+				
+			}
+			
+		}
+		
+		var t2;
+		function sendMatingRequest(trigger_player, other_player)
+		{
+			if(player_placements[trigger_player] == player_placements[other_player]) //check if both player are still at the same spot
+			{
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(trigger_player), {request_from: airconsole.convertPlayerNumberToDeviceId(other_player), request_character: assigned_choices[other_player]});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(other_player), {request_from: airconsole.convertPlayerNumberToDeviceId(trigger_player), request_character: assigned_choices[trigger_player]});
+					//assume player are bonded (for no further request and future confirmation)
+					newCouple(trigger_player, other_player);
+			}
+		}
+		
+		function checkPlayerAcceptance(player)
+		{
+			var bonded_index = bonded_players.indexOf(player);
+					bonded_index = Math.round(bonded_index + 2*(-bonded_index%2 + 0.5));
+					var other_player = bonded_players[bonded_index];
+					var other_response = players_acceptance[other_player];
+					console.log("this response "+players_acceptance[player]+" other response "+other_response);
+					if(other_response != undefined)
+					{
+						if(other_response && players_acceptance[player]) //both agree
+						{
+							confirmed_couples[Math.floor(bonded_index/2)] = true;
+							airconsole.message(airconsole.convertPlayerNumberToDeviceId(player), {confirm_bond: true});
+							airconsole.message(airconsole.convertPlayerNumberToDeviceId(other_player), {confirm_bond: true});
+						}
+						else
+						{
+							airconsole.message(airconsole.convertPlayerNumberToDeviceId(player), {confirm_bond: false});
+							airconsole.message(airconsole.convertPlayerNumberToDeviceId(other_player), {confirm_bond: false});
+							removeCouple(Math.floor(bonded_index/2));
+						}
+						players_acceptance[player] = undefined;
+						players_acceptance[other_player] = undefined;
+						console.log("ACCEPTANCES "+players_acceptance);
+					}
+		}
+		
+		function newCouple(player1, player2)
+		{
+			bonded_players.push(player1);
+			bonded_players.push(player2);
+			date = new Date();
+			confirmed_couples.push(false);
+			couple_strengths.push(0);
+			startRelationTimes.push(date.getTime());
+			lastApartTime.push(undefined);
+			apartTimesTotal.push(0);
+			apartTimesCurrent.push(0);
+		}
+		
+		function removeCouple(num)
+		{
+			bonded_players.remove(2*num, 2);
+			confirmed_couples.remove(num);
+			couple_strengths.remove(num);
+			startRelationTimes.remove(num);
+			lastApartTime.remove(num);
+			apartTimesTotal.remove(num);
+			apartTimesCurrent.remove(num);
+		}
+		
+		var startRelationTimes = [];
+		var lastApartTime = [];
+		var apartTimesTotal = [];
+		var apartTimesCurrent = [];
+		const STRENGTHS_UPDTAE_RATE = 20;
+		var t3;
+		function loopPlayerRelationStrengths()
+		{
+			date = new Date();
+			for(var i = 0; i < couple_strengths.length; i++)
+			{
+				if(lastApartTime[i] != undefined)
+				{
+					if(player_placements[bonded_players[2*i]] == player_placements[bonded_players[2*i+1]])
+					{
+						apartTimesTotal[i] = apartTimesTotal[i] + apartTimesCurrent[i];
+						apartTimesCurrent[i] = 0;
+						lastApartTime[i] = undefined;
+						airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i]), {apart: false});
+						airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i+1]), {apart: false});
+					}
+					else
+					{
+						var add_time_apart = date.getTime() - lastApartTime[i] - APART_DELAY;
+						if(add_time_apart > 0)
+						{
+							apartTimesCurrent[i] = add_time_apart;
+						}
+					}
+				}
+				else if(player_placements[bonded_players[2*i]] != player_placements[bonded_players[2*i+1]])
+				{
+					lastApartTime[i] = date.getTime();
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i]), {apart: true});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i+1]), {apart: true});
+				}
+				
+				console.log(RELATION_TIME);
+				
+				couple_strengths[i] = (date.getTime()-startRelationTimes-APART_PENALTY*(apartTimesTotal[i]+apartTimesCurrent[i]))/RELATION_TIME;
+				
+				if(couple_strengths[i] <= 0)
+				{
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i]), {break_bond: true});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i+1]), {break_bond: true});
+					removeCouple(i);
+					i--;
+				}
+				else if(couple_strengths[i] >= 1)
+				{
+					addWonCouple(i);
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i]), {won_couple: true});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i+1]), {won_couple: true});
+					showCoupleWon(bonded_players[2*i], bonded_players[2*i+1]);
+					removeCouple(i);
+					checkGameOver();
+				}
+			}
+			t3 = setTimeout("loopPlayerRelationStrengths()", STRENGTHS_UPDTAE_RATE);
+		}
+		
+		var won_couples = [];
+		function addWonCouple(num)
+		{
+			won_couples.push(bonded_players[2*num]);
+			won_couples.push(bonded_players[2*num+1]);
+			player_status[bonded_players[2*num]] = PlayerStatus.won;
+			player_status[bonded_players[2*num+1]] = PlayerStatus.won;
+		}
+		
+		var lost_players = [];
+		function addLostPlayer(player)
+		{
+			lost_players.push(player);
+			player_status[player] = PlayerStatus.lost;
+		}
+		
+		var currently_opening = false;
+		var open_start;
+		var t4;
+		const barOffsetX = -50;
+		const barOffsetY = -40;
+		function openDoor(which)
+		{
+			currently_opening = true;
+			date = new Date();
+			open_start = date.getTime();
+			door_opening.style.display = "block";
+			var newPos = doors[eyeLookAtDoor].getBoundingClientRect();
+			door_opening.style.top = (newPos.top+barOffsetY)+"px";
+			door_opening.style.left = (newPos.left+barOffsetX)+"px";
+			openLoop();
+		}
+		
+		const OPEN_UPDATE_RATE = 20;
+		function openLoop()
+		{
+			date = new Date();
+			var prog = (date.getTime()-open_start)/DOOR_OPEN_TIME;
+			if(prog >= 1)
+			{
+				door_opening.style.display = "none";
+				terminateOpening();
+			}
+			else
+			{
+				door_opening.value = door_opening.max*prog;
+				t4 = setTimeout("openLoop()", OPEN_UPDATE_RATE);
+			}
+		}
+		
+		function terminateOpening()
+		{
+			currently_opening = false;
+			
+			var found_bedshares = [];
+			for(var i = 0; i < MAX_PLAYERS; i++)
+			{
+				if(player_placements[i] == eyeLookAtDoor && player_status[i] == PlayerStatus.playing && i != eyePlayer)
+				{
+					found_bedshares.push(i);
+				}
+			}
+			
+			var score = 0;
+			if(found_bedshares.length > 1)
+			{
+				var found_couples = new Array(couple_strengths.length);
+				
+				for(var i = 0; i < found_bedshares.length; i++)
+				{
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(found_bedshares[i]), {caught: true});
+					var bi = bonded_players.indexOf(found_bedshares[i]);
+					if(bi != -1)
+					{
+						var ci = Math.floor(bi/2);
+						if(found_couples[ci] == undefined && confirmed_couples[ci])
+						{
+							found_couples[ci] = 1;
+						}
+						else if (found_couples[ci] == 1)
+						{
+							found_couples[ci] = 2;
+						}
+					}
+				}
+				console.log("investigation : "+found_bedshares+" "+found_couples+" "+bonded_players);
+				var caught_couples = 0;
+				for(var i = 0; i < found_couples.length; i++)
+				{
+					if(found_couples[i] == 2)
+					{
+						airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i]), {break_bond: true});
+						airconsole.message(airconsole.convertPlayerNumberToDeviceId(bonded_players[2*i+1]), {break_bond: true});
+						addLostPlayer(bonded_players[2*i]);
+						addLostPlayer(bonded_players[2*i+1]);
+						showCoupleCaught(bonded_players[2*i], bonded_players[2*i+1]);
+						removeCouple(i);
+						caught_couples++;
+					}
+				}
+				console.log("investigation2 : "+found_bedshares+" "+found_couples+" "+bonded_players);
+				score = caught_couples;
+				
+				if(caught_couples > 0)
+				{
+					checkGameOver();
+				}
+			}
+			
+			airconsole.message(airconsole.convertPlayerNumberToDeviceId(eyePlayer), {door_score: score});
+			
+			doors[eyeLookAtDoor].style.backgroundImage = "url('images/dooropen.png')";
+			open_doors[eyeLookAtDoor] = true;
+			t5 = setTimeout(closeDoor, CLOSE_DELAY, eyeLookAtDoor);
+			updateCharactersInDoor(eyeLookAtDoor);
+		}
+		
+		const CLOSE_DELAY = 10000;
+		var t5;
+		var open_doors;
+		function closeDoor(door_num)
+		{
+			open_doors[door_num] = false;
+			doors[door_num].style.backgroundImage = "url('images/doorclosed.png')";
+			updateCharactersInDoor(door_num);
+		}
+		
+		function updateCharactersInDoor(door_num)
+		{
+			
+			while (doors[door_num].hasChildNodes()) {
+				doors[door_num].removeChild(doors[door_num].lastChild);
+			}
+			
+			if(!open_doors[door_num])
+				return;
+			
+			
+			var characters = [];
+			for(var i = 0; i < MAX_PLAYERS; i++)
+			{
+				if(player_placements[i] == door_num && player_status[i] == PlayerStatus.playing && i != eyePlayer)
+				{
+					characters.push(assigned_choices[i]);
+				}
+			}
+			
+			if(characters.length == 0)
+				return;
+			
+			var table = document.createElement('div');
+			table.className = "char-table";
+			doors[door_num].appendChild(table);
+			
+			var perrow = Math.ceil(Math.sqrt(characters.length));
+			var row;
+			for(var i = 0; i < characters.length; i++)
+			{
+				if(i%perrow == 0)
+				{
+					row = document.createElement('div');
+					row.style = "display: table-row";
+					table.appendChild(row);
+				}
+				var newdiv = document.createElement('div');
+				newdiv.className = "charimg";
+				newdiv.style.backgroundImage = "url("+character_mapping[characters[i]]+")";
+				row.appendChild(newdiv);
+			}
+			
+			doors[door_num].appendChild(table);
+		}
+		
+		const SHOW_CAUGHT_TIME = 2000;
+		function showCoupleCaught(player1, player2)
+		{
+			document.getElementById("partner1").style.backgroundImage = "url("+character_mapping[assigned_choices[player1]]+")";
+			document.getElementById("partner2").style.backgroundImage = "url("+character_mapping[assigned_choices[player2]]+")";
+			document.getElementById("couple-caught").style.display = "block";
+			document.getElementById("popup-caption").innerHTML = "Caught!";
+			document.getElementById("nickname1").innerHTML = airconsole.getNickname(airconsole.convertPlayerNumberToDeviceId(player1));
+			document.getElementById("nickname2").innerHTML = airconsole.getNickname(airconsole.convertPlayerNumberToDeviceId(player2));
+			setTimeout(function() {document.getElementById("couple-caught").style.display = "none";}, SHOW_CAUGHT_TIME);
+		}
+		
+		function showCoupleWon(player1, player2)
+		{
+			document.getElementById("partner1").style.backgroundImage = "url("+character_mapping[assigned_choices[player1]]+")";
+			document.getElementById("partner2").style.backgroundImage = "url("+character_mapping[assigned_choices[player2]]+")";
+			document.getElementById("couple-caught").style.display = "block";
+			document.getElementById("popup-caption").innerHTML = "This couple won!";
+			document.getElementById("nickname1").innerHTML = airconsole.getNickname(airconsole.convertPlayerNumberToDeviceId(player1));
+			document.getElementById("nickname2").innerHTML = airconsole.getNickname(airconsole.convertPlayerNumberToDeviceId(player2));
+			setTimeout(function() {document.getElementById("couple-caught").style.display = "none";}, SHOW_CAUGHT_TIME);
+		}
+		
+		
+		//////////// end game functions //////////////
+		
+		var game_complete = false;	
+		function checkGameOver()
+		{
+			
+			var undecided_players = 0;
+			for(var i = 0; i < MAX_PLAYERS; i++)
+			{
+				if(player_status[i] != undefined && player_status[i] == PlayerStatus.playing)
+				{
+					undecided_players++;
+				}
+			}
+			
+			if(registered_players.length >= 3 && undecided_players <= 1)
+			{
+				game_complete = true;
+				setTimeout("endGame()", GAME_END_DELAY);
+			}
+		}
+		
+		function endGame()
+		{
+			var ids = airconsole.getActivePlayerDeviceIds();
+			for(var i = 0; i < ids.length; i++)
+			{
+				airconsole.message(ids[i], {game_over: true});
+			}
+			
+			var winner;
+			if(won_couples.length < lost_players.length)
+			{
+				winner = "police";
+			}
+			else
+			{
+				winner = "couples";
+			}
+			document.getElementById("scene").style.display = "none";
+			document.getElementById("score").innerHTML = "winner = "+winner+" <br> "+lost_players.length+game_over_caught+" <br> "+(won_couples.length/2)+game_over_couples;
+		}
+	
+	</script>
+    <style type="text/css">
+     <!--  @font-face {
+        font-family: 'PressStart2P';
+        src: url('PressStart2P.ttf') format('truetype');
+      } -->
+
+      html, body {
+        height: 100%;
+        margin: 0px;
+        <!-- font-family: 'PressStart2P', sans-serif; -->
+        color: white;
+        text-align: center;
+      }
+
+      .game {
+        background-color: black;
+        top: 50%;
+        margin-top: -25%;
+        padding-bottom: 50%;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #sky {
+        position: absolute;
+        top: 0px;
+        left:0px;
+        width: 1920px;
+        height: 1080px;
+		background-image: url('images/sky.png');
+		background-repeat: repeat;
+		background-position: 0px 0px;
+      }
+	  
+	  #ground {
+        position: absolute;
+        top: 807px;
+        left:0px;
+        width: 100%;
+        height: 100%;
+		background-image: url('images/ground.png');
+		background-repeat: no-repeat;
+      }
+	  
+	  #building {
+        position: absolute;
+        top: 85px;
+        left:125px;
+        width: 100%;
+        height: 100%;
+		background-image: url('images/building.png');
+		background-repeat: no-repeat;
+      }
+	  
+	  #door1 {
+        position: absolute;
+        top: 182px;
+        left:376px;
+        width: 100%;
+        height: 100%;
+		background-image: url(images/doorclosed.png);
+		background-repeat: no-repeat;
+      }
+	  
+	  #door2 {
+        position: absolute;
+        top: 182px;
+        left:873px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door3 {
+        position: absolute;
+        top: 182px;
+        left:1367px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door4 {
+        position: absolute;
+        top: 497px;
+        left:376px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door5 {
+        position: absolute;
+        top: 497px;
+        left:873px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door6 {
+        position: absolute;
+        top: 497px;
+        left:1367px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door7 {
+        position: absolute;
+        top: 813px;
+        left:376px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door8 {
+        position: absolute;
+        top: 813px;
+        left:873px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #door9 {
+        position: absolute;
+        top: 813px;
+        left:1367px;
+        width: 100%;
+        height: 100%;
+		background-repeat: no-repeat;
+      }
+	  
+	  #eye {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+		background-image: url(images/eye.png);
+		background-repeat: no-repeat;
+		background-size: 100px 100px;
+      }
+	  
+	  #door-opening {
+		position: absolute;
+		height: 30px;
+		width: 300px;
+		}
+		
+      #score {
+        position: absolute;
+        top: 10%;
+        left: 0px;
+        width: 100%;
+        font-size: 48px;
+		color: white;
+		text-align: center;
+      }
+
+      #wait {
+        position: absolute;
+        top: 10%;
+        margin-top: 80px;
+        left: 0px;
+        width: 100%;
+        font-size: 24px;
+        color: lime;
+      }
+	  
+	  #couple-caught {
+		position: absolute;
+		background-color: #222;
+		top: 10%;
+		left: 10%;
+		width: 80%;
+		height: 80%;
+		display: table;
+	  }
+	  
+	  .charimg {
+		background-image: url("images/characters/remove-user_128px.png");
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center center;
+		height: 256px;
+		display: table-cell;
+		}
+		
+		.nicktext {
+		display: table-cell;
+		color: white;
+		font-size: 50pt;
+		text-align: center;
+		}
+		
+	.char-table {
+		position: relative;
+		top: 10px;
+		left: 10px;
+		width: 170px;
+		height: 170px;
+		display: table;
+	}
+    </style>
+  </head>
+  <body onload="init()">
+    <div class="game">
+	  <div id="scene">
+		  <div id="sky"></div>
+		  <div id="ground"></div>
+		  <div id="building"></div>
+		  <div id="door1"></div>
+		  <div id="door2"></div>
+		  <div id="door3"></div>
+		  <div id="door4"></div>
+		  <div id="door5"></div>
+		  <div id="door6"></div>
+		  <div id="door7"></div>
+		  <div id="door8"></div>
+		  <div id="door9"></div>
+		  <progress id=door-opening value="22" max="100"></progress>
+		  <div id="eye"></div>
+	  </div>
+      <div id="score"></div>
+      <div id="wait"></div>
+	  <div id="couple-caught">
+		<div id="popup-caption" style="color: white; font-size: 50pt; text-align: center;">
+		Caught !
+		</div>
+		<div style="display: table-row;">
+			<div class=charimg id=partner1></div>
+			<div class=charimg id=partner2></div>
+		</div>
+		<div style="display: table-row;">
+			<div class=nicktext id=nickname1>bla</div>
+			<div class=nicktext id=nickname2>bla</div>
+		</div>
+	  </div>
+    </div>
+  </body>
+</html>
