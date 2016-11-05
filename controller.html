@@ -180,13 +180,14 @@
 			//doors[door_num].style = "background-color: #ccf400;"
 			//doors[current_door].style = "background-color: #000000;"
 			//doors[door_num].style.backgroundImage = 'url("images/doorframe_in.png")';
+			console.log("place me at "+door_num);
 			doors[door_num].style.backgroundColor = '#ccf400';
 			if(current_door != door_num)
 				doors[current_door].style.backgroundColor = '#000000';
 			current_door = door_num;
 		}
 		
-		function fillCharTable(door_num, characters)
+		/*function fillCharTable(door_num, characters)
 		{
 			current_door = door_num;
 			
@@ -215,9 +216,9 @@
 			/*var newPos = doors[door_num].getBoundingClientRect();
 			char_table.style.top = (newPos.top+charOffsetY)+"px";
 			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		}
+		//}
 		
-		function fillCharTablePolice(door_num)
+		/*function fillCharTablePolice(door_num)
 		{
 			current_door = door_num;
 			
@@ -235,7 +236,7 @@
 			/*var newPos = doors[door_num].getBoundingClientRect();
 			char_table.style.top = (newPos.top+charOffsetY)+"px";
 			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		}
+		//}
 
 		
 		var givenChoice;
