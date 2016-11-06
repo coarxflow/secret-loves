@@ -388,7 +388,7 @@
 				if(player_status[i] == PlayerStatus.won || player_status[i] == PlayerStatus.lost)
 					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: place, bedshares: bedshares_pics});
 				else if(i==trigger_player)
-					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: last_door});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: place});
 			}
 			
 			//inform previous bedshares that x has left
