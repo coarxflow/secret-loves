@@ -82,12 +82,10 @@
 			}
 			else if (device_id == AirConsole.SCREEN && data.placement != undefined) {
 				placeChar(data.placement);
-				/*if(data.bedshares != undefined) {
+				if(data.bedshares != undefined) {
 					fillCharTable(data.placement, data.bedshares);
 				}
-				else {
-					placeChar(data.placement);
-				}*/
+				
 			}
 			else if (device_id == AirConsole.SCREEN && data.bedshares != undefined) {
 				if(player_status == PlayerStatus.won || player_status == PlayerStatus.lost)
