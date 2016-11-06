@@ -48,7 +48,7 @@
 			setupEye();
 			
 			sky = document.getElementById('sky');
-			loopSky();
+			//loopSky();
 			
 			player_status = new Array(MAX_PLAYERS);
 			player_placements = new Array(MAX_PLAYERS);
@@ -202,7 +202,6 @@
 							updateCharactersInDoor(last_door);
 						}
 					}
-					console.log("placement : "+new_door+" "+player_placements);
 				}
 				else if(data.acceptBond != undefined) {
 					players_acceptance[player] = data.acceptBond;
@@ -211,8 +210,8 @@
 				else if(data.choice != undefined) {
 					registered_players.push(player);
 					assigned_choices[player] = data.choice;
-					givePlacement(device_id);
 					player_status[player] = PlayerStatus.playing;
+					givePlacement(device_id);
 				}
 				else if(data.open_door != undefined)
 				{
