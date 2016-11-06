@@ -90,7 +90,8 @@
 				}*/
 			}
 			else if (device_id == AirConsole.SCREEN && data.bedshares != undefined) {
-				//fillCharTable(data.bedshares);
+				if(player_status == PlayerStatus.won || player_status == PlayerStatus.lost)
+					fillCharTable(data.bedshares);
 			}
 			else if (device_id == AirConsole.SCREEN && data.confirm_bond != undefined) {
 				requestResult(data.confirm_bond);
@@ -188,57 +189,19 @@
 			current_door = door_num;
 		}
 		
-		/*function fillCharTable(door_num, characters)
+		function fillCharTable(characters)
 		{
-			current_door = door_num;
-			
-			
-			while (char_table.hasChildNodes()) {
-				char_table.removeChild(char_table.lastChild);
-			}
-			
-			var perrow = Math.ceil(Math.sqrt(characters.length));
-			var row;
 			for(var i = 0; i < characters.length; i++)
 			{
-				if(i%perrow == 0)
-				{
-					row = document.createElement('div');
-					row.style = "display: table-row";
-					char_table.appendChild(row);
-				}
-				var newdiv = document.createElement('div');
-				newdiv.className = "charimg";
-				newdiv.style.backgroundImage = "url("+character_mapping[characters[i]]+")";
-				row.appendChild(newdiv);
+				document.getElementById('photo'+i).style.backgroundImage = "url("+character_mapping[characters[i]]+")";
+				document.getElementById('photo'+i).style.display = "";
 			}
 			
-			doors[door_num].appendChild(char_table);
-			/*var newPos = doors[door_num].getBoundingClientRect();
-			char_table.style.top = (newPos.top+charOffsetY)+"px";
-			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		//}
-		
-		/*function fillCharTablePolice(door_num)
-		{
-			current_door = door_num;
-			
-			
-			while (char_table.hasChildNodes()) {
-				char_table.removeChild(char_table.lastChild);
+			for(;i < 4; i++)
+			{
+				document.getElementById('photo'+i).style.display = "none";
 			}
-			
-			var newdiv = document.createElement('div');
-			newdiv.className = "charimg";
-			newdiv.style.backgroundImage = "url("+police_character[chosenCharacter%2]+")";
-			char_table.appendChild(newdiv);
-			
-			doors[door_num].appendChild(char_table);
-			/*var newPos = doors[door_num].getBoundingClientRect();
-			char_table.style.top = (newPos.top+charOffsetY)+"px";
-			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		//}
-
+		}
 		
 		var givenChoice;
 		function promptChoice(choice)
@@ -313,6 +276,7 @@
 		}
 		
 		var bondedWith;
+	  	var bondedDeviceID;
 		var bondStart;
 		function requestResult(bonded)
 		{
@@ -333,6 +297,7 @@
 		function startRelation()
 		{
 			bondedWith = tentativeBondWith;
+			bondedDeviceID = tentativeBondDeviceID;
 			bondStart = date.getTime();
 			relation_progress = 0;
 			updateRelationProgress();
@@ -340,7 +305,7 @@
 			
 			partner_photo.style.backgroundImage = "url("+character_mapping[bondedWith]+")";
 			partner_photo.style.display = "";
-			couple_info.innerHTML = partner_title+airconsole.getNickname(bondedWith);
+			couple_info.innerHTML = partner_title+airconsole.getNickname(bondedDeviceID);
 		}
 		
 		function endRelation()
@@ -749,8 +714,7 @@
 		height: 50px;
 		display: none;
 		margin: auto;
-		margin-left: auto;
-    		margin-right: auto;
+		line-height: 50px;
 		color: #ccf400;
 	}
 	
@@ -867,7 +831,7 @@
 		width: 100%;
 		margin-top: -8px;
 		color: #777;
-		font-size: 150%;
+		font-size: 100%;
 	}
 	
 	#relation-strength {
@@ -919,8 +883,10 @@
 	</div>
 	<div id=char-table>
 		<div class=char-row>
+			<div id=photo0 class=charimg style="display: none;"></div>
 			<div id=photo1 class=charimg></div>
 			<div id=photo2 class=charimg></div>
+			<div id=photo3 class=charimg style="display: none;"></div>
 		</div>
 	</div>
 	<div id=nickname></div>
