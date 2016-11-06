@@ -441,7 +441,7 @@
 			for(var i = 0; i < bedshares.length; i++)
 			{
 				if(player_status[i] == PlayerStatus.won || player_status[i] == PlayerStatus.lost)
-					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: last_door, bedshares: bedshares_pics});
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {bedshares: bedshares_pics});
 			}
 		}
 		
