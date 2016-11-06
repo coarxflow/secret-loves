@@ -20,6 +20,10 @@
 		var couple_strengths = [];
 		var confirmed_couples = [];
 		
+		var audio_charmov;
+		var audio_doorop;
+		var audio_doorcl;
+		
 		var date = new Date();
 		
 		
@@ -61,6 +65,10 @@
 			document.getElementById("couple-caught").style.display = "none";
 			door_opening = document.getElementById("door-opening");
 			door_opening.style.display = "none";
+			
+			audio_charmov = document.getElementById('charactermove');
+			audio_doorop = document.getElementById('dooropen');
+			audio_doorcl = document.getElementById('doorclose');
 		}
 		
 		function setupDoors() {
@@ -202,6 +210,8 @@
 							updateCharactersInDoor(last_door);
 						}
 					}
+					
+					audio_charmov.play();
 				}
 				else if(data.acceptBond != undefined) {
 					players_acceptance[player] = data.acceptBond;
@@ -274,7 +284,7 @@
 			player_placements[player] = available_placement;
 			sendBedsharesAndPlacement(player, -1);
 			updateCharactersInDoor(available_placement);
-			console.log("place player "+player+" at "+available_placement);
+			audio_charmov.play();
 		}
 		
 		////////////// update functions ////////////////////
@@ -607,6 +617,7 @@
 			door_opening.style.top = (newPos.top+barOffsetY)+"px";
 			door_opening.style.left = (newPos.left+barOffsetX)+"px";
 			openLoop();
+			audio_doorop.play();
 		}
 		
 		const OPEN_UPDATE_RATE = 20;
@@ -701,6 +712,7 @@
 			open_doors[door_num] = false;
 			doors[door_num].style.backgroundImage = "url('images/doorclosed.png')";
 			updateCharactersInDoor(door_num);
+			audio_doorcl.play();
 		}
 		
 		function updateCharactersInDoor(door_num)
@@ -1060,5 +1072,8 @@
 		</div>
 	  </div>
     </div>
+	  <audio id="charactermove" src="audio/351518__mh2o__chess-move-on-alabaster.wav" preload="auto"></audio>
+	  <audio id="opendoor" src="audio/176146__swagmuffinplus__sliding-doors.wav" preload="auto"></audio>
+	  <audio id="closedoor" src="audio/266682__wjtaylor__door-close.mp3" preload="auto"></audio>
   </body>
 </html>
