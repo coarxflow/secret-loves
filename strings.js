@@ -15,7 +15,8 @@ const instr_caught = "You have been caught!";
 const instr_end = "Move around to see what others are doing.";
 
 const partner_title = "Partner : ";
-const single_title = "single";
+const single_title = "Single";
+const bedshares_title = "{0} visitors in this room";
 
 const game_over_couples = " couples have survived!";
 const game_over_caught = " players have been caught!";
