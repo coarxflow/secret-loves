@@ -10,6 +10,7 @@
 		var sky;
 		var eye;
 		var door_opening;
+		var wait_prompt;
 		
 		var registered_players = new Array();
 		var player_status;
@@ -41,6 +42,16 @@
 		   return false;
 		}
 		
+		  String.prototype.format = function() {
+		    var args = arguments;
+		    return this.replace(/{(\d+)}/g, function(match, number) { 
+		      return typeof args[number] != 'undefined'
+			? args[number]
+			: match
+		      ;
+		    });
+		  };
+		
 		/////////////// initalization functions //////////////////////////
 		
 		function init() {
@@ -53,6 +64,8 @@
 			
 			sky = document.getElementById('sky');
 			//loopSky();
+			
+			wait_prompt = document.getElementById("wait");
 			
 			player_status = new Array(MAX_PLAYERS);
 			player_placements = new Array(MAX_PLAYERS);
@@ -119,7 +132,7 @@
 			if(!countdownstarted && registered_players.length >= 3) //start open door countdown once enough players
 			{
 				countdownstarted = true;
-				setTimeout("initDoorsOpenCountdown()", INIT_DOOR_OPEN_TIME);
+				setTimeout("initDoorsOpenCountdown()", 1000);
 			}
 			
 			if(eyePlayer == undefined && registered_players.length >= 3 && !initPhase) //elect controller when door closed
@@ -148,14 +161,26 @@
 		
 		var initPhase = true;
 		var countdownstarted = false;
+		var initDoorsCountDown = INIT_DOOR_OPEN_TIME;
 		function initDoorsOpenCountdown()
 		{
-			for (var i = 0; i < 9; i ++)
-			{
-				closeDoor(i);
-			}
+			wait_prompt.innerHTML = "Need 1 more player!";
 			
-			initPhase = false;
+			if(initDoorsCountDown <= 0)
+			{
+				for (var i = 0; i < 9; i ++)
+				{
+					closeDoor(i);
+				}
+
+				initPhase = false;
+			}
+			else
+			{
+				initDoorsCountDown -= 1000;
+				setTimeout("initDoorsOpenCountdown()", 1000);
+				wait_prompt.innerHTML = game_start.format(Math.round(initDoorsCountDown/1000));
+			}
 		}
 		
 		//////////// control and message functions //////////////////////
@@ -234,26 +259,26 @@
 		}
 		
 		function checkPlayers() {
-        var active_players = airconsole.getActivePlayerDeviceIds();
-        var connected_controllers = airconsole.getControllerDeviceIds();
-		//airconsole.setActivePlayers(MAX_PLAYERS);
-		
-		airconsole.setActivePlayers(MAX_PLAYERS);
-		
-        if (connected_controllers.length >= 3) {
-            // Enough controller devices connected to start the game.
-            // Setting the first 3 controllers to active players.
-            document.getElementById("wait").innerHTML = "";
-		  } else if (connected_controllers.length == 2) {
-			document.getElementById("wait").innerHTML = "Need 1 more player!";
-            
-          } else if (connected_controllers.length == 1) {
-            document.getElementById("wait").innerHTML = "Need 2 more players!";
-            
-          } else if (connected_controllers.length == 0) {
-            document.getElementById("wait").innerHTML = "Need 3 more players!";
-            
-        }
+			var active_players = airconsole.getActivePlayerDeviceIds();
+			var connected_controllers = airconsole.getControllerDeviceIds();
+				//airconsole.setActivePlayers(MAX_PLAYERS);
+
+				airconsole.setActivePlayers(MAX_PLAYERS);
+
+			if (connected_controllers.length >= 3) {
+			    // Enough controller devices connected to start the game.
+			    // Setting the first 3 controllers to active players.
+			    document.getElementById("wait").innerHTML = "";
+				  } else if (connected_controllers.length == 2) {
+					document.getElementById("wait").innerHTML = "Need 1 more player!";
+
+			  } else if (connected_controllers.length == 1) {
+			    document.getElementById("wait").innerHTML = "Need 2 more players!";
+
+			  } else if (connected_controllers.length == 0) {
+			    document.getElementById("wait").innerHTML = "Need 3 more players!";
+
+			}
       }
 		
 		var choices_pool = [1, 3, 5, 7, 9, 11];
@@ -397,7 +422,7 @@
 			{	
 				if(player_status[i] == PlayerStatus.won || player_status[i] == PlayerStatus.lost)
 					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: current_door, bedshares: bedshares_pics});
-				else if(i==trigger_player)
+				else if(bedshares[i]==trigger_player)
 					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: current_door});
 			}
 			
