@@ -120,8 +120,6 @@
 			}
 		}
 		
-		placeChar(0);
-		
 		setupControls();
 
     }
@@ -278,6 +276,7 @@
 			
 			self_photo.style.backgroundImage = "url("+police_character[chosenCharacter%2]+")";
 			couple_info.innerHTML = single_title;
+			couple_info.style.display = "none";
 		}
 		
 		var tentativeBondWith;
@@ -739,8 +738,8 @@
 	}
 	
 	#button-open {
-		width: 70px;
-		height: 30px;
+		width: 100px;
+		height: 50px;
 		display: none;
 		margin: auto;
 	}
@@ -864,12 +863,14 @@
 		width: 75%;
 		margin: auto;
 		display: none;
+		color: #ccf400;
 	}
 	
 	#door-opening {
 		width: 75%;
 		display: none;
 		display: none;
+		color: #ccf400;
 	}
 	
   </style>
