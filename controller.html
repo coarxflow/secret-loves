@@ -14,6 +14,7 @@
 	var char_table;
 	var doors;
 	var relation_strength;
+	 var open_button;
 	var door_opening;
 	var self_photo;
 	var partner_photo;
@@ -36,6 +37,8 @@
 		relation_strength = document.getElementById("relation-strength");
 		
 		door_opening = document.getElementById("door-opening");
+	    
+	    open_button = document.getElementById("button-open");
 		
 		char_table = document.getElementById("char-table");
 		
@@ -383,6 +386,7 @@
 			door_progress = 0;
 			currently_opening = true;
 			door_opening.style.display = "block";
+			open_button.style.display = "none";
 			updateOpenProgress();
 		}
 		
@@ -397,7 +401,10 @@
 			if(currently_opening)
 				t2 = setTimeout("updateOpenProgress()", PROGRESS_UPDATE_RATE);
 			else
+			{
 				door_opening.style.display = "none";
+				open_button.style.display = "block";
+			}
 		}
 		
 		function endGame()
@@ -742,7 +749,8 @@
 		height: 50px;
 		display: none;
 		margin: auto;
-		text-align: center;
+		margin-left: auto;
+    		margin-right: auto;
 		color: #ccf400;
 	}
 	
@@ -872,7 +880,7 @@
 	#door-opening {
 		width: 75%;
 		display: none;
-		display: none;
+		margin: auto;
 		color: #ccf400;
 		background-color: #ccf400;
 		-webkit-appearance: none;
