@@ -1,4 +1,5 @@
 const pick_character = "Pick a character!";
+const game_start = "Game start in {0} seconds"
 
 const instr_elected = "You have been elected as police man! <br> Open doors and catch illegal couples.";
 const instr_character = "Move around and meet friends.";
