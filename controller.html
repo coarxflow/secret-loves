@@ -739,8 +739,8 @@
 	}
 	
 	#button-open {
-		width: 50px;
-		height: 20px;
+		width: 70px;
+		height: 30px;
 		display: none;
 		margin: auto;
 	}
@@ -769,8 +769,8 @@
 		background-size: contain;
 		background-repeat: no-repeat;
 		background-position: center center;
-		width: 80px;
-		height: 79px;
+		width: 70px;
+		height: 70px;
 	}
 	
 	#char-cursor {
@@ -906,14 +906,14 @@
 	<div id=nickname></div>
 	<progress id=relation-strength value="22" max="100"></progress>
 	<progress id=door-opening value="22" max="100"></progress>
-	<div id=button-open class=button-300-150 ontouchstart="openDoor()" onmousedown="openDoor()">open</div>
+	<div id=button-open class=button-300-150 ontouchstart="openDoor()" onmousedown="openDoor()">peek</div>
 </div>
 <div id=prompt-choice>
 	<div id=choice-1 class=choicepic ontouchstart="chooseCharacter(0)" onmousedown="chooseCharacter(0)"></div>
 	<div id=choice-2 class=choicepic ontouchstart="chooseCharacter(1)" onmousedown="chooseCharacter(1)"></div>
 </div>
 <div id=prompt-request>
-	<div id=pretensioner class=choicepic"></div>
+	<div id=pretensioner class=choicepic></div>
 	<div id=accept class=choicepic ontouchstart="acceptBond()" onmousedown="acceptBond()"></div>
 	<div id=refuse class=choicepic ontouchstart="refuseBond()" onmousedown="refuseBond()"></div>
 </div>
