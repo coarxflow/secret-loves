@@ -48,7 +48,7 @@
 			setupEye();
 			
 			sky = document.getElementById('sky');
-			loopSky();
+			//loopSky();
 			
 			player_status = new Array(MAX_PLAYERS);
 			player_placements = new Array(MAX_PLAYERS);
@@ -107,7 +107,14 @@
 		var t;
 		function giveRoles() {
 			console.log ( 'giveRoles called '+registered_players.length);
-			if(eyePlayer == undefined && registered_players.length >= 3 && !initPhase)
+			
+			if(!countdownstarted && registered_players.length >= 3) //start open door countdown once enough players
+			{
+				countdownstarted = true;
+				setTimeout("initDoorsOpenCountdown()", INIT_DOOR_OPEN_TIME);
+			}
+			
+			if(eyePlayer == undefined && registered_players.length >= 3 && !initPhase) //elect controller when door closed
 			{
 				var newEyePlayer = registered_players[Math.floor(Math.random()*registered_players.length)];
 				if(player_status[newEyePlayer] == PlayerStatus.playing) //make sure player has completed character selection
@@ -183,8 +190,7 @@
 					}
 					else
 					{
-						if(player_status[player] == PlayerStatus.won || player_status[player] == PlayerStatus.lost)
-							sendBedsharesAndPlacement(player, last_door);
+						sendBedsharesAndPlacement(player, last_door);
 						if(eyePlayer!=undefined) //avoid early bonding (one character could become police in between)
 							checkPlayerInteraction(player);
 						if(open_doors[new_door])
@@ -196,7 +202,6 @@
 							updateCharactersInDoor(last_door);
 						}
 					}
-					console.log("placement : "+new_door+" "+player_placements);
 				}
 				else if(data.acceptBond != undefined) {
 					players_acceptance[player] = data.acceptBond;
@@ -205,13 +210,8 @@
 				else if(data.choice != undefined) {
 					registered_players.push(player);
 					assigned_choices[player] = data.choice;
-					givePlacement(device_id);
 					player_status[player] = PlayerStatus.playing;
-					if(!countdownstarted)
-					{
-						countdownstarted = true;
-						setTimeout("initDoorsOpenCountdown()", INIT_DOOR_OPEN_TIME);
-					}
+					givePlacement(device_id);
 				}
 				else if(data.open_door != undefined)
 				{
@@ -272,8 +272,9 @@
 			}
 			
 			player_placements[player] = available_placement;
-			sendBedsharesAndPlacement(available_placement, -1);
+			sendBedsharesAndPlacement(player, -1);
 			updateCharactersInDoor(available_placement);
+			console.log("place player "+player+" at "+available_placement);
 		}
 		
 		////////////// update functions ////////////////////
@@ -368,14 +369,14 @@
 			return new_door;
 		}
 		
-		function sendBedsharesAndPlacement(player, last_door)
+		function sendBedsharesAndPlacement(trigger_player, last_door)
 		{
 			var bedshares = new Array();
 			var bedshares_pics = new Array();
-			var place = player_placements[player];
+			var current_door = player_placements[trigger_player];
 			for(var i = 0; i < player_placements.length; i++)
 			{
-				if(place == player_placements[i] && i != eyePlayer && player_status[i] == PlayerStatus.playing)
+				if(current_door == player_placements[i] && i != eyePlayer && player_status[i] == PlayerStatus.playing)
 				{
 					bedshares_pics.push(assigned_choices[i]);
 					bedshares.push(i);
@@ -383,8 +384,11 @@
 			}
 			
 			for(var i = 0; i < bedshares.length; i++)
-			{
-				airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: place, bedshares: bedshares_pics});
+			{	
+				if(player_status[i] == PlayerStatus.won || player_status[i] == PlayerStatus.lost)
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: current_door, bedshares: bedshares_pics});
+				else if(i==trigger_player)
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: current_door});
 			}
 			
 			//inform previous bedshares that x has left
@@ -401,7 +405,8 @@
 			
 			for(var i = 0; i < bedshares.length; i++)
 			{
-				airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: last_door, bedshares: bedshares_pics});
+				if(player_status[i] == PlayerStatus.won || player_status[i] == PlayerStatus.lost)
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: last_door, bedshares: bedshares_pics});
 			}
 		}
 		
@@ -717,6 +722,8 @@
 					characters.push(assigned_choices[i]);
 				}
 			}
+			
+			console.log("update door "+door_num+" characters "+characters);
 			
 			if(characters.length == 0)
 				return;

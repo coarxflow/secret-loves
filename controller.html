@@ -180,13 +180,14 @@
 			//doors[door_num].style = "background-color: #ccf400;"
 			//doors[current_door].style = "background-color: #000000;"
 			//doors[door_num].style.backgroundImage = 'url("images/doorframe_in.png")';
+			console.log("place me at "+door_num);
 			doors[door_num].style.backgroundColor = '#ccf400';
 			if(current_door != door_num)
 				doors[current_door].style.backgroundColor = '#000000';
 			current_door = door_num;
 		}
 		
-		function fillCharTable(door_num, characters)
+		/*function fillCharTable(door_num, characters)
 		{
 			current_door = door_num;
 			
@@ -215,9 +216,9 @@
 			/*var newPos = doors[door_num].getBoundingClientRect();
 			char_table.style.top = (newPos.top+charOffsetY)+"px";
 			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		}
+		//}
 		
-		function fillCharTablePolice(door_num)
+		/*function fillCharTablePolice(door_num)
 		{
 			current_door = door_num;
 			
@@ -235,7 +236,7 @@
 			/*var newPos = doors[door_num].getBoundingClientRect();
 			char_table.style.top = (newPos.top+charOffsetY)+"px";
 			char_table.style.left = (newPos.left+charOffsetX)+"px";*/
-		}
+		//}
 
 		
 		var givenChoice;
@@ -352,9 +353,9 @@
 			couple_info.innerHTML = single_title;
 		}
 		
-		var caught = true;
+		var caught = false;
 		const CAUGHT_DELAY = 2000;
-		function caughtCountdown()
+		function caughtCountdown() //not useful? player caught are removed from game
 		{
 			caught = false;
 		}
@@ -738,8 +739,8 @@
 	}
 	
 	#button-open {
-		width: 50px;
-		height: 20px;
+		width: 70px;
+		height: 30px;
 		display: none;
 		margin: auto;
 	}
@@ -768,8 +769,8 @@
 		background-size: contain;
 		background-repeat: no-repeat;
 		background-position: center center;
-		width: 80px;
-		height: 79px;
+		width: 70px;
+		height: 70px;
 	}
 	
 	#char-cursor {
@@ -905,14 +906,14 @@
 	<div id=nickname></div>
 	<progress id=relation-strength value="22" max="100"></progress>
 	<progress id=door-opening value="22" max="100"></progress>
-	<div id=button-open class=button-300-150 ontouchstart="openDoor()" onmousedown="openDoor()">open</div>
+	<div id=button-open class=button-300-150 ontouchstart="openDoor()" onmousedown="openDoor()">peek</div>
 </div>
 <div id=prompt-choice>
 	<div id=choice-1 class=choicepic ontouchstart="chooseCharacter(0)" onmousedown="chooseCharacter(0)"></div>
 	<div id=choice-2 class=choicepic ontouchstart="chooseCharacter(1)" onmousedown="chooseCharacter(1)"></div>
 </div>
 <div id=prompt-request>
-	<div id=pretensioner class=choicepic"></div>
+	<div id=pretensioner class=choicepic></div>
 	<div id=accept class=choicepic ontouchstart="acceptBond()" onmousedown="acceptBond()"></div>
 	<div id=refuse class=choicepic ontouchstart="refuseBond()" onmousedown="refuseBond()"></div>
 </div>
