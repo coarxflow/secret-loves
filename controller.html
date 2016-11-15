@@ -428,8 +428,8 @@
 				
 				if(ratio > 1) //vertical movement
 				{
-					val = 2*Math.abs(tmpdiffy);//there seem to be less sensitivity along y
-					if(tmpdiffy > 0)
+					val = 1.5*Math.abs(tmpdiffy);//there seem to be less sensitivity along y
+					if(tmpdiffy < 0)
 					{
 						move_direction = "uc";
 					}
@@ -498,6 +498,16 @@
 					{
 						max = directions[i];
 						max_i = i;
+					}
+				}
+				
+				//cancel other directions after a certain threshold
+				if(max > DECISIVE_STRENGTH/3)
+				{
+					for(var i=0; i < directions.length; i++)
+					{
+						if (i != max_i)
+							directions[i] = 0;
 					}
 				}
 				
@@ -589,7 +599,7 @@
 		{
 			var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 
-			if (!/android/i.test(userAgent)) {
+			if (!/android/i.test(userAgent) && !/iPhone/i.test(userAgent)) {
 				return;
 			}																								
 			
@@ -617,6 +627,12 @@
 		}
 	
 	function goToNeigh(move_direction) {
+		var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+		
+		if (/android/i.test(userAgent) || /iPhone/i.test(userAgent)) {
+			return;
+		}
+		
 		airconsole.message(AirConsole.SCREEN, {move: move_direction});
 		
 		placeChar(getNeighborDoorInDirection(current_door, move_direction))
@@ -727,7 +743,7 @@
 	#building-summary {
 		display: table;
 		margin: auto;
-		padding-top: 120px;
+		padding-top: 160px;
 	}
 	
 	.doors-row {
