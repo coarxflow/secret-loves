@@ -124,7 +124,9 @@
 				instructer.innerHTML = data.door_score+instr_caught_couples;
 			}
 			else if (device_id == AirConsole.SCREEN && data.won_couple != undefined) {
-				instructer.innerHTML = instr_won_couple;
+				
+				instructer.innerHTML = instr_won_couple+" <br> "+instr_end;
+				relation_strength.style.display = "none";
 				player_status = PlayerStatus.won;
 			}
 			else if (device_id == AirConsole.SCREEN && data.game_over) {
