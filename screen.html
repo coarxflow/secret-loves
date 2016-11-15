@@ -405,42 +405,52 @@
 		
 		function sendBedsharesAndPlacement(trigger_player, last_door)
 		{
+			var spiritual_bedshares = new Array();
 			var bedshares = new Array();
 			var bedshares_pics = new Array();
 			var current_door = player_placements[trigger_player];
 			for(var i = 0; i < player_placements.length; i++)
 			{
-				if(current_door == player_placements[i] && i != eyePlayer && player_status[i] == PlayerStatus.playing)
+				if(current_door == player_placements[i] && i != eyePlayer)
 				{
-					bedshares_pics.push(assigned_choices[i]);
-					bedshares.push(i);
+					spiritual_bedshares.push(i);
+					if(player_status[i] == PlayerStatus.playing)
+					{
+						bedshares_pics.push(assigned_choices[i]);
+						bedshares.push(i);
+					}
 				}
 			}
 			
-			for(var i = 0; i < bedshares.length; i++)
+			for(var i = 0; i < spiritual_bedshares.length; i++)
 			{	
-				if(player_status[bedshares[i]] == PlayerStatus.won || player_status[bedshares[i]] == PlayerStatus.lost)
-					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {bedshares: bedshares_pics});
-				if(bedshares[i]==trigger_player) //confirm placement
-					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {placement: current_door});
+				if(player_status[spiritual_bedshares[i]] == PlayerStatus.won || player_status[spiritual_bedshares[i]] == PlayerStatus.lost)
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(spiritual_bedshares[i]), {bedshares: bedshares_pics});
+				if(spiritual_bedshares[i]==trigger_player) //confirm placement
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(spiritual_bedshares[i]), {placement: current_door});
 			}
 			
 			//inform previous bedshares that x has left
+			spiritual_bedshares = new Array();
 			bedshares = new Array();
 			bedshares_pics = new Array();
 			for(var i = 0; i < player_placements.length; i++)
 			{
 				if(last_door == player_placements[i] && i != eyePlayer)
 				{
-					bedshares_pics.push(assigned_choices[i]);
-					bedshares.push(i);
+					spiritual_bedshares.push(i);
+					if(player_status[i] == PlayerStatus.playing)
+					{
+						bedshares_pics.push(assigned_choices[i]);
+						bedshares.push(i);
+					}
 				}
 			}
 			
-			for(var i = 0; i < bedshares.length; i++)
+			for(var i = 0; i < spiritual_bedshares.length; i++)
 			{
-				if(player_status[bedshares[i]] == PlayerStatus.won || player_status[bedshares[i]] == PlayerStatus.lost)
-					airconsole.message(airconsole.convertPlayerNumberToDeviceId(bedshares[i]), {bedshares: bedshares_pics});
+				if(player_status[spiritual_bedshares[i]] == PlayerStatus.won || player_status[spiritual_bedshares[i]] == PlayerStatus.lost)
+					airconsole.message(airconsole.convertPlayerNumberToDeviceId(spiritual_bedshares[i]), {bedshares: bedshares_pics});
 			}
 		}
 		
