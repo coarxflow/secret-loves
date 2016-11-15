@@ -114,13 +114,13 @@
 			else if (device_id == AirConsole.SCREEN && data.break_bond) {
 				if(caught)
 				{
-					endRelation(true);
+					endRelation(false);
 					player_status = PlayerStatus.lost;
 					instructer.innerHTML = instr_caught+" <br> "+instr_end;
 					fillCharTable(new Array());
 				}
 				else
-					endRelation(false);
+					endRelation(true);
 			}
 			else if (device_id == AirConsole.SCREEN && data.door_score != undefined) {
 				currently_opening = false;
