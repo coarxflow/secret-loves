@@ -25,6 +25,16 @@
 	var player_status = PlayerStatus.registering;
 	
 	var date = new Date();
+	  
+	  String.prototype.format = function() {
+		    var args = arguments;
+		    return this.replace(/{(\d+)}/g, function(match, number) { 
+		      return typeof args[number] != 'undefined'
+			? args[number]
+			: match
+		      ;
+		    });
+		  };
 	
     /**
      * Sets up the communication to the screen.
@@ -194,6 +204,8 @@
 				document.getElementById('photo'+i).style.backgroundImage = "url("+character_mapping[characters[i]]+")";
 				document.getElementById('photo'+i).style.display = "";
 			}
+			
+			couple_info.innerHTML = characters_inside.format(i);
 			
 			for(;i < 4; i++)
 			{
