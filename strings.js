@@ -1,11 +1,11 @@
 const pick_character = "Pick a character!";
 const game_start = "Game start in {0} seconds"
 
-const instr_elected = "You have been elected as police man! <br> Open doors and catch illegal couples.";
+const instr_elected = "You have been elected as police officer! <br> Open doors and catch illegal couples.";
 const instr_character = "Move around and meet friends.";
 const instr_request = " would like to share time with you.";
 const instr_bonded_accept = "You are bonded with ";
-const instr_bonded_task = "<br> Try to stay together to strengthen your relation.";
+const instr_bonded_task = "<br> Stay together to strengthen your relation, and win!";
 const instr_bonded_refuse = " has refused you.";
 const instr_caught_couples = " couples have been caught!";
 const instr_won_couple = "Your couple has won!";
