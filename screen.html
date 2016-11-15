@@ -172,6 +172,8 @@
 					closeDoor(i);
 				}
 
+				wait_prompt.innerHTML = "";
+				
 				initPhase = false;
 			}
 			else
@@ -1046,7 +1048,6 @@
 		width: 80%;
 		height: 80%;
 		display: table;
-		margin: auto;
 	  }
 	  
 	  .charimg {
@@ -1062,6 +1063,7 @@
 		color: white;
 		font-size: 50pt;
 		text-align: center;
+			display: table-cell;
 		}
 		
 	.char-table {
@@ -1105,11 +1107,11 @@
 		<div id="popup-caption" style="color: white; font-size: 50pt; text-align: center;">
 		Caught !
 		</div>
-		<div style="display: table-row;">
-			<div class=charimg id=partner1 style="width: 70px; height: 70px;"></div>
-			<div class=charimg id=partner2 style="width: 70px; height: 70px;"></div>
+		<div style="display: table-row; margin: auto;">
+			<div class=charimg id=partner1 style="width: 150px; height: 150px;"></div>
+			<div class=charimg id=partner2 style="width: 150px; height: 150px;"></div>
 		</div>
-		<div style="display: table-row;">
+		<div style="display: table-row; margin: auto;">
 			<div class=nicktext id=nickname1>bla</div>
 			<div class=nicktext id=nickname2>bla</div>
 		</div>
