@@ -82,7 +82,7 @@
 			}
 			else if (device_id == AirConsole.SCREEN && data.placement != undefined) {
 				placeChar(data.placement);
-				if(data.bedshares != undefined) {
+				if(data.bedshares != undefined && (player_status == PlayerStatus.won || player_status == PlayerStatus.lost)) {
 					fillCharTable(data.placement, data.bedshares);
 				}
 				
@@ -429,7 +429,7 @@
 				if(ratio > 1) //vertical movement
 				{
 					val = 1.5*Math.abs(tmpdiffy);//there seem to be less sensitivity along y
-					if(tmpdiffy < 0)
+					if(tmpdiffy > 0)
 					{
 						move_direction = "uc";
 					}
@@ -743,7 +743,7 @@
 	#building-summary {
 		display: table;
 		margin: auto;
-		padding-top: 160px;
+		padding-top: 190px;
 	}
 	
 	.doors-row {
@@ -845,7 +845,7 @@
 		width: 100%;
 		margin-top: -8px;
 		color: #777;
-		font-size: 100%;
+		font-size: 120%;
 	}
 	
 	#relation-strength {
