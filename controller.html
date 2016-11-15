@@ -112,12 +112,15 @@
 				setTimeout("caughtCountdown()", CAUGHT_DELAY);
 			}
 			else if (device_id == AirConsole.SCREEN && data.break_bond) {
-				endRelation();
 				if(caught)
 				{
+					endRelation(true);
 					player_status = PlayerStatus.lost;
 					instructer.innerHTML = instr_caught+" <br> "+instr_end;
+					fillCharTable(new Array());
 				}
+				else
+					endRelation(false);
 			}
 			else if (device_id == AirConsole.SCREEN && data.door_score != undefined) {
 				currently_opening = false;
@@ -128,6 +131,7 @@
 				instructer.innerHTML = instr_won_couple+" <br> "+instr_end;
 				relation_strength.style.display = "none";
 				player_status = PlayerStatus.won;
+				fillCharTable(new Array());
 			}
 			else if (device_id == AirConsole.SCREEN && data.game_over) {
 				setTimeout("endGame()", CAUGHT_DELAY);
@@ -302,7 +306,7 @@
 				if(bondAccepted)
 					instructer.innerHTML = airconsole.getNickname(tentativeBondDeviceID)+instr_bonded_refuse;
 				bondedWith = undefined;
-				endRelation();
+				endRelation(false);
 			}
 		}
 		
@@ -320,12 +324,14 @@
 			couple_info.innerHTML = partner_title+airconsole.getNickname(bondedDeviceID);
 		}
 		
-		function endRelation()
+		function endRelation(worn_off)
 		{
 			bondedWith = undefined;
 			bondStart = undefined;
 			relation_strength.style.display = "none";
-			instructer.innerHTML = instr_relationend+" <br> "+instr_end;
+			
+			if(worn_off)
+				instructer.innerHTML = instr_relationend+" <br> "+instr_end;
 			
 			partner_photo.style.backgroundImage = "";
 			partner_photo.style.display = "none";
